@@ -44,6 +44,8 @@
   - [[#commenting][Commenting]]
   - [[#file-management][File management]]
   - [[#bracket-completion][Bracket completion]]
+- [[#terminal][Terminal]]
+  - [[#vterm][VTerm]]
 - [[#runtime-performance][Runtime performance]]
 
 * Startup and Basic Settings
@@ -105,6 +107,7 @@
 * UI Configuration
 
 #+begin_src emacs-lisp
+
   (scroll-bar-mode -1)        ; Disable visible scrollbar
   (tool-bar-mode -1)          ; Disable the toolbar
   (tooltip-mode -1)           ; Disable tooltips
@@ -116,32 +119,39 @@
 
   ;; Full-screen
   (add-to-list 'default-frame-alist '(fullscreen . fullboth))
+
 #+end_src
 
 ** Font Configuration
 
 #+begin_src emacs-lisp
+
   (set-face-attribute 'default nil :font "JetBrains Mono" :height 120)
+
 #+end_src
 
 ** Line Numbers
 
 #+begin_src emacs-lisp
+
   ;; Line numbers
   (column-number-mode)
   (global-display-line-numbers-mode t)
 
   (dolist (mode '(org-mode-hook
                   term-mode-hook
+                  vterm-mode-hook
                   treemacs-mode-hook
                   shell-mode-hook
                   eshell-mode-hook))
     (add-hook mode (lambda() (display-line-numbers-mode 0))))
+
 #+end_src
 
 * Package Management
 
 #+begin_src emacs-lisp
+
   ;; Initialize package sources
   (require 'package)
 
@@ -159,11 +169,13 @@
 
   (require 'use-package)
   (setq use-package-always-ensure t)
+
 #+end_src
 
 ** Automatic package update
 
 #+begin_src emacs-lisp
+
   (use-package auto-package-update
     :custom
     (auto-package-update-interval 7)
@@ -172,16 +184,19 @@
     :config
     (auto-package-update-maybe)
     (auto-package-update-at-time "09:00"))
+
 #+end_src
 
 * Editing Configuration
 
 #+begin_src emacs-lisp
+
   ;; Make ESC quit prompts
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
   ;; Enable soft wrapping globally (works with evil-respect-visual-line-mode)
   (global-visual-line-mode 1)
+
 #+end_src
 
 * Completion and Navigation
@@ -189,6 +204,7 @@
 ** Ivy
 
 #+begin_src emacs-lisp
+
   (use-package ivy
     :diminish
     :init
@@ -211,11 +227,13 @@
     :after ivy
     :init
     (ivy-rich-mode 1))
+
 #+end_src
 
 ** Counsel
 
 #+begin_src emacs-lisp
+
   (use-package counsel
     :after ivy
     :bind (("M-x" . counsel-M-x)
@@ -223,22 +241,26 @@
            ("C-x b" . counsel-switch-buffer)
            :map minibuffer-local-map
            ("C-r" . 'counsel-minibuffer-history)))
+
 #+end_src
 
 ** Which Key
 
 #+begin_src emacs-lisp
+
   (use-package which-key
        :defer 0 
        :diminish which-key-mode
        :config
        (which-key-mode)
        (setq which-key-idle-delay 0.3))
+
 #+end_src
 
 ** Helpful
 
 #+begin_src emacs-lisp
+
   (use-package helpful
     :after counsel
     :custom
@@ -249,6 +271,7 @@
     ([remap describe-command]  . helpful-command)
     ([remap describe-variable] . counsel-describe-variable)
     ([remap describe-key]      . helpful-key))
+
 #+end_src
 
 * Appearance
@@ -256,36 +279,44 @@
 ** Icons
 
 #+begin_src emacs-lisp
+
   (use-package all-the-icons)
+
 #+end_src
 
 ** Modeline
 
 #+begin_src emacs-lisp
+
   (use-package doom-modeline
     :init
     (setq doom-modeline-icon t
           doom-modeline-height 40)
     :config
     (doom-modeline-mode 1))
+
 #+end_src
 
 ** Theme
 
 #+begin_src emacs-lisp
+
   (use-package doom-themes
     :init
     (setq doom-themes-enable-bold t
           doom-themes-enable-italic t)
     :config
     (load-theme 'doom-material-dark t))
+
 #+end_src
 
 ** Rainbow Delimiters
 
 #+begin_src emacs-lisp
+
   (use-package rainbow-delimiters
     :hook (prog-mode . rainbow-delimiters-mode))
+
 #+end_src
 
 * Keybindings and Evil Mode
@@ -293,6 +324,7 @@
 ** Evil Mode
 
 #+begin_src emacs-lisp
+
   (use-package evil
     :init
     (setq evil-want-integration t
@@ -313,6 +345,7 @@
     :after evil
     :config
     (evil-collection-init))
+
 #+end_src
 
 ** General (Leader Keys)
@@ -341,20 +374,21 @@
       "fb" '(counsel-switch-buffer :which-key "find buffer")
       "fde" '(lambda () (interactive) (find-file (expand-file-name "~/.config/emacs/Emacs.org")))
 
-      ;; Write / save
-      "w"  '(save-buffer :which-key "save file")
-
-      ;; Kill
-      "x"  '(kill-current-buffer :which-key "kill buffer")
+      ;; Buffer management
+      "b"  '(:ignore t :which-key "buffers")
+      "br" '(rename-buffer :which-key "rename buffer")
+      "bw" '(save-buffer :which-key "save file")
+      "bx" '(kill-current-buffer :which-key "kill buffer")
 
       ;; Toggles
       "t"  '(:ignore t :which-key "toggles")
       "tt" '(counsel-load-theme :which-key "choose theme")
 
-      ;; Org
-      "o"  '(:ignore t :which-key "org")
-      "or" '(org-mode :which-key "reload org-mode")
-      "ot" '(org-todo :which-key "toggle TODO")
+      ;; Terminal
+      "o"  '(:ignore t :which-key "open")
+      ;"ot" '(vterm :which-key "vterm terminal")
+      "ot" '(multi-vterm :which-key "new vterm")
+      "op" '(multi-vterm-project :which-key "vterm in project")
 
       ;; Lsp
       "l"  '(:ignore t :which-key "lsp")
@@ -375,6 +409,7 @@
 ** Hydra
 
 #+begin_src emacs-lisp
+
   (use-package hydra
     :defer t)
 
@@ -386,6 +421,7 @@
 
   (my/leader-keys
     "ts" '(hydra-text-scale/body :which-key "scale text"))
+
 #+end_src
 
 * Org Mode Configuration
@@ -393,6 +429,7 @@
 ** Org Mode Setup Functions
 
 #+begin_src emacs-lisp
+
   (defun my/org-mode-setup ()
     (org-indent-mode)
     (visual-line-mode 1))
@@ -418,11 +455,13 @@
 
     ;; Document title
     (set-face-attribute 'org-document-title nil :height 1.4 :weight 'bold))
+
 #+end_src
 
 ** Org Mode Package
 
 #+begin_src emacs-lisp
+
   (use-package org
     :hook ((org-mode . my/org-mode-setup)
            (org-mode . my/org-font-scale))
@@ -432,28 +471,34 @@
             org-edit-src-content-indentation 2  ; Indentation inside source blocks
             org-src-preserve-indentation nil)   ; Let org-mode manage indentation
     (my/org-font-setup))
+
 #+end_src
 
 ** Org Toc
 
 #+begin_src emacs-lisp
+
   (use-package toc-org
     :hook (org-mode . toc-org-mode))
+
 #+end_src
 
 ** Org Bullets
 
 #+begin_src emacs-lisp
+
   (use-package org-bullets
     :after org
     :hook (org-mode . org-bullets-mode)
     :custom
     (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+
 #+end_src
 
 ** Visual Fill Column
 
 #+begin_src emacs-lisp
+
   (defun my/org-mode-visual-fill ()
     (setq visual-fill-column-width 100
           visual-fill-column-center-text t)
@@ -461,6 +506,7 @@
 
   (use-package visual-fill-column
     :hook (org-mode . my/org-mode-visual-fill))
+
 #+end_src
 
 * Org Babel Setup
@@ -468,6 +514,7 @@
 ** Babel Languages
 
 #+begin_src emacs-lisp
+
   (with-eval-after-load 'org
     (org-babel-do-load-languages
         'org-babel-load-languages
@@ -475,11 +522,13 @@
         (python . t)))
 
     (push '("conf-unix" . conf-unix) org-src-lang-modes))
+
 #+end_src
 
 ** Org Tempo Templates
 
 #+begin_src emacs-lisp
+
   (with-eval-after-load 'org
     ;; This is needed as of Org 9.2
     (require 'org-tempo)
@@ -487,11 +536,13 @@
     (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
     (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
     (add-to-list 'org-structure-template-alist '("py" . "src python")))
+
 #+end_src
 
 ** Auto-tangle Configuration
 
 #+begin_src emacs-lisp
+
   ;; Automatically tangle our Emacs.org config file when we save it
   (defun my/org-babel-tangle-config ()
     (when (string-equal (buffer-file-name)
@@ -501,6 +552,7 @@
         (org-babel-tangle))))
 
   (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'my/org-babel-tangle-config)))
+
 #+end_src
 
 * Development
@@ -508,15 +560,18 @@
 ** Version Control
 
 #+begin_src emacs-lisp
+
   (use-package magit
     :commands magit-status 
     :custom
    (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
 #+end_src
 
 ** Language servers
 
 #+begin_src emacs-lisp
+
   (defun my/lsp-mode-setup ()
     (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
     (lsp-headerline-breadcrumb-mode))
@@ -544,34 +599,41 @@
 
   (use-package lsp-ivy
     :after lsp)
+
 #+end_src
 
 *** Python
 
 #+begin_src emacs-lisp
+
   (use-package lsp-pyright
     :hook (python-mode . lsp-deferred)
     :init
     (setq lsp-pyright-typechecking-mode "basic")
     :config
     (setq lsp-python-formatter 'ruff))
+
 #+end_src
 
 *** TypeScript
 
 #+begin_src emacs-lisp
+
   (use-package typescript-mode
     :mode "\\.ts\\'"
     :hook (typescript-mode . lsp-deferred)
     :config
     (setq typescript-indent-level 2))
+
 #+end_src
 
 #+begin_src emacs-lisp
+
   (with-eval-after-load 'lsp-mode
     ;; Disable tsserver formatter
     (setq lsp-typescript-format-enable nil
           lsp-javascript-format-enable nil))
+
 #+end_src
 
 ** Direnv
@@ -679,9 +741,29 @@
 
 #+end_src
 
+* Terminal
+
+** VTerm
+
+#+begin_src emacs-lisp
+
+  (use-package vterm
+    :ensure t
+    :commands vterm
+    :config
+    (setq vterm-max-scrollback 10000
+            vterm-shell "/bin/bash"))
+   (use-package multi-vterm
+    :ensure t
+    :commands (multi-vterm multi-vterm-project))
+
+#+end_src
+
 * Runtime performance
 
 #+begin_src emacs-lisp
-;; Make gc pauses faster by decreasing the threshold.
-(setq gc-cons-threshold (* 2 1000 1000))
+
+  ;; Make gc pauses faster by decreasing the threshold.
+  (setq gc-cons-threshold (* 2 1000 1000))
+
 #+end_src
