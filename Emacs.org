@@ -1,6 +1,6 @@
 #+TITLE: Emacs Configuration
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
-# bliiblaa
+
 * Table of Contents :toc:
 - [[#startup-and-basic-settings][Startup and Basic Settings]]
   - [[#backup--autosave-management][Backup & Autosave management]]
@@ -38,9 +38,11 @@
   - [[#auto-tangle-configuration][Auto-tangle Configuration]]
 - [[#development][Development]]
   - [[#version-control][Version Control]]
-  - [[#language-servers][Language servers]]
+  - [[#language-server-eglot][Language Server (Eglot)]]
+  - [[#breadcrumbs][Breadcrumbs]]
+  - [[#treemacs][Treemacs]]
   - [[#direnv][Direnv]]
-  - [[#company-mode][Company mode]]
+  - [[#completion-company][Completion (Company)]]
   - [[#commenting][Commenting]]
   - [[#file-management][File management]]
   - [[#bracket-completion][Bracket completion]]
@@ -205,28 +207,31 @@
 
 #+begin_src emacs-lisp
 
-  (use-package ivy
-    :diminish
-    :init
-    (ivy-mode 1)
-    :bind (("C-s" . swiper)
-           :map ivy-minibuffer-map
-           ("TAB" . ivy-alt-done)	
-           ("C-l" . ivy-alt-done)
-           ("C-j" . ivy-next-line)
-           ("C-k" . ivy-previous-line)
-           :map ivy-switch-buffer-map
-           ("C-k" . ivy-previous-line)
-           ("C-l" . ivy-done)
-           ("C-d" . ivy-switch-buffer-kill)
-           :map ivy-reverse-i-search-map
-           ("C-k" . ivy-previous-line)
-           ("C-d" . ivy-reverse-i-search-kill)))
+    (use-package ivy
+      :diminish
+      :init
+      (ivy-mode 1)
+      :bind (("C-s" . swiper)
+             :map ivy-minibuffer-map
+             ("TAB" . ivy-alt-done)	
+             ("C-l" . ivy-alt-done)
+             ("C-j" . ivy-next-line)
+             ("C-k" . ivy-previous-line)
+             :map ivy-switch-buffer-map
+             ("C-k" . ivy-previous-line)
+             ("C-l" . ivy-done)
+             ("C-d" . ivy-switch-buffer-kill)
+             :map ivy-reverse-i-search-map
+             ("C-k" . ivy-previous-line)
+             ("C-d" . ivy-reverse-i-search-kill))
+       :config (setq ivy-re-builders-alist
+               '((counsel-M-x . ivy--regex-ignore-order)
+                (t . ivy--regex-plus))))
 
-  (use-package ivy-rich
-    :after ivy
-    :init
-    (ivy-rich-mode 1))
+    (use-package ivy-rich
+      :after ivy
+      :init
+      (ivy-rich-mode 1))
 
 #+end_src
 
@@ -379,6 +384,8 @@
       "br" '(rename-buffer :which-key "rename buffer")
       "bw" '(save-buffer :which-key "save file")
       "bx" '(kill-current-buffer :which-key "kill buffer")
+      "bn" '(switch-to-next-buffer :which-key "next buffer")
+      "bp" '(switch-to-prev-buffer :which-key "previous buffer")
 
       ;; Toggles
       "t"  '(:ignore t :which-key "toggles")
@@ -390,10 +397,16 @@
       "ot" '(multi-vterm :which-key "new vterm")
       "op" '(multi-vterm-project :which-key "vterm in project")
 
-      ;; Lsp
+      ;; Eglot (LSP)
       "l"  '(:ignore t :which-key "lsp")
-      "lf" '(lsp-ui-doc-focus-frame    :which-key "focus docs")
-      "lu" '(lsp-ui-doc-unfocus-frame  :which-key "unfocus docs")
+      "la" '(eglot-code-actions :which-key "code actions")
+      "lr" '(eglot-rename :which-key "rename")
+      "lf" '(eglot-format :which-key "format")
+      "ld" '(xref-find-definitions :which-key "go to definition")
+      "lD" '(xref-find-references :which-key "find references")
+
+      ;; Dired
+      "e" '(dired-jump :which key "explorer")
 
       ;; SmartBrackets
       "s" '(:ignore t :which-key "wrap")
@@ -568,37 +581,18 @@
 
 #+end_src
 
-** Language servers
+** Language Server (Eglot)
 
 #+begin_src emacs-lisp
 
-  (defun my/lsp-mode-setup ()
-    (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-    (lsp-headerline-breadcrumb-mode))
-
-  (use-package lsp-mode
-    :commands (lsp lsp-deferred)
-    :hook (lsp-mode . my/lsp-mode-setup)
-    :init
-    (setq lsp-keymap-prefix "C-c l")
+  (use-package eglot
+    :ensure nil  ; Built-in from Emacs 29+
+    :commands (eglot eglot-ensure)
     :config
-    (lsp-enable-which-key-integration t))
+    (setq eglot-report-progress nil)  ; Disable progress reporting in modeline
 
-  (use-package lsp-ui
-    :hook (lsp-mode . lsp-ui-mode)
-    :custom
-    (lsp-ui-doc-enable t)
-    (lsp-ui-doc-show-with-cursor t)
-    (lsp-ui-doc-delay 0.2)
-    (lsp-ui-doc-position 'bottom)
-    (lsp-ui-doc-use-webkit nil)
-    (lsp-ui-doc-show-with-mouse nil))
-
-  (use-package lsp-treemacs
-    :after lsp)
-
-  (use-package lsp-ivy
-    :after lsp)
+    ;; Shutdown server when last buffer is closed
+    (setq eglot-autoshutdown t))
 
 #+end_src
 
@@ -606,12 +600,18 @@
 
 #+begin_src emacs-lisp
 
-  (use-package lsp-pyright
-    :hook (python-mode . lsp-deferred)
-    :init
-    (setq lsp-pyright-typechecking-mode "basic")
+  (use-package python-mode
+    :ensure nil
+    :hook (python-mode . eglot-ensure)
     :config
-    (setq lsp-python-formatter 'ruff))
+    (setq python-indent-offset 4))
+
+  ;; Python formatting with black
+  (use-package python-black
+    :demand t
+    :after python
+    :custom
+    (python-black-extra-args '("--target-version" "py312")))
 
 #+end_src
 
@@ -621,19 +621,44 @@
 
   (use-package typescript-mode
     :mode "\\.ts\\'"
-    :hook (typescript-mode . lsp-deferred)
+    :hook (typescript-mode . eglot-ensure)
     :config
     (setq typescript-indent-level 2))
 
 #+end_src
 
+
+** Breadcrumbs
+
 #+begin_src emacs-lisp
 
-  (with-eval-after-load 'lsp-mode
-    ;; Disable tsserver formatter
-    (setq lsp-typescript-format-enable nil
-          lsp-javascript-format-enable nil))
+(use-package breadcrumb
+  :hook (prog-mode . breadcrumb-mode))
+  
+#+end_src
 
+** Treemacs
+
+#+begin_src emacs-lisp
+
+  (use-package treemacs
+    :ensure t
+    :defer t
+    :config
+    ;; Follow current file
+    (treemacs-follow-mode t)
+
+    ;; Automatically switch projects
+    (treemacs-project-follow-mode t)
+
+    ;; Clean UI defaults
+    (setq treemacs-is-never-other-window t
+          treemacs-width 30))
+
+  (use-package treemacs-evil
+    :after (treemacs evil)
+    :ensure t)
+  
 #+end_src
 
 ** Direnv
@@ -652,20 +677,19 @@
 
 #+end_src
 
-** Company mode
+** Completion (Company)
 
 #+begin_src emacs-lisp
 
   (use-package company
-    :after lsp-mode
-    :hook (lsp-mode . company-mode)
+    :hook (prog-mode . company-mode)
     :bind (:map company-active-map
-           ("<tab>" . company-complete-selection))
-          (:map lsp-mode-map
-           ("<tab>" . company-indent-or-complete-common))
+           ("<tab>" . company-complete-selection)
+           ("C-n" . company-select-next)
+           ("C-p" . company-select-previous))
     :custom
     (company-minimum-prefix-length 1)
-    (company-idle-delay 0.0))
+    (company-idle-delay 0.1))  ; Slightly higher for better performance
 
   (use-package company-box
     :hook (company-mode . company-box-mode))
@@ -690,11 +714,11 @@
   (use-package dired
     :ensure nil
     :commands (dired dired-jump)
-    :bind (("C-x C-j" . dired-jump))
     :custom
     (dired-listing-switches "-agho --group-directories-first")
     (dired-kill-when-opening-new-dired-buffer t)
     :config
+    (setq dired-dwim-target t)
     (evil-collection-define-key 'normal 'dired-mode-map
       "h" #'dired-up-directory
       "l" #'dired-find-file))
